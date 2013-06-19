@@ -69,7 +69,7 @@
         o = angular.extend({}, _defaults, opts),
         that = this,
         currentInfoWindow = null;
-      
+      	
       this.center = opts.center;
       this.zoom = o.zoom;
       this.draggable = o.draggable;
@@ -77,7 +77,8 @@
       this.selector = o.container;
       this.markers = [];
       this.options = o.options;
-      
+	this.bounds = null;
+	
       this.draw = function () {
         
         if (that.center == null) {
@@ -101,14 +102,34 @@
               function () {
                 that.dragging = true;
               }
-          );
-          
+          );	              
+
+	    //HACK: The first idle trigger typically doesn't have bounds
+	    //and bounds_changed triggers too often during dragging
+	    google.maps.event.addListenerOnce(_instance, "bounds_changed",
+					      function(){
+						  google.maps.event.trigger(_instance,"idle");
+					      });
+
           google.maps.event.addListener(_instance, "idle",
               
               function () {
-                that.dragging = false;
-              }
-          );
+                  that.dragging = false;
+		  var bound = _instance.getBounds();
+		  if( angular.isDefined(bound) ){
+		      that.bounds = {
+			  ne: {
+			      latitude:bound.getNorthEast().lat(),
+			      longitude:bound.getNorthEast().lng()
+			  },
+			  sw:{
+			      latitude:bound.getSouthWest().lat(),
+			      longitude:bound.getSouthWest().lng()			  
+			  }
+		      }
+		  }
+              });
+
           
           google.maps.event.addListener(_instance, "drag",
               
@@ -338,7 +359,8 @@
         zoom: "=zoom", // required
         refresh: "&refresh", // optional
         windows: "=windows", // optional
-        events: "=events"
+          events: "=events",
+	  bounds: "=bounds" //optional
       },
       controller: controller,      
       link: function (scope, element, attrs, ctrl) {
@@ -415,6 +437,16 @@
           });
         });
         
+	  if(angular.isDefined(attrs.bounds)){
+              _m.on("idle", function () {
+		  $timeout(function () {		      
+		      scope.$apply(function (s) {
+			  scope.bounds = _m.bounds;
+		      });
+		  });
+
+              });
+	  }
         if (angular.isDefined(scope.events)) {
           for (var eventName in scope.events) {
             if (scope.events.hasOwnProperty(eventName) && angular.isFunction(scope.events[eventName])) {
@@ -472,7 +504,6 @@
         
         // Markers
         scope.$watch("markers", function (newValue, oldValue) {
-          
           $timeout(function () {
             
             angular.forEach(newValue, function (v, i) {
