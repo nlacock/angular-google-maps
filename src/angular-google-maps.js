@@ -60,7 +60,7 @@
     /**
      * 
      */
-    function PrivateMapModel(opts) {
+      function PrivateMapModel(opts,scope,compile) {
       
       var _instance = null,
         _markers = [],  // caches the instances of google.maps.Marker
@@ -203,8 +203,8 @@
       
       this.addMarker = function (lat, lng, icon, infoWindowContent, label, url,
           thumbnail) {
-        
-        if (that.findMarker(lat, lng) != null) {
+        var m = that.findMarker(lat, lng)
+        if ( m != null) {
           return;
         }
         
@@ -222,18 +222,21 @@
           
         }
 
-        if (infoWindowContent != null) {
-          var infoWindow = new google.maps.InfoWindow({
-            content: infoWindowContent
-          });
+        if (infoWindowContent != null) {	    
 
-          google.maps.event.addListener(marker, 'click', function() {
-            if (currentInfoWindow != null) {
-              currentInfoWindow.close();
-            }
-            infoWindow.open(_instance, marker);
-            currentInfoWindow = infoWindow;
-          });
+	    marker.clickListener = 
+		google.maps.event.addListener(marker, 'click', function() {
+		    if (currentInfoWindow && currentInfoWindow != infoWindow) {
+			currentInfoWindow.close();
+		    }
+
+		    var infoWindow = new google.maps.InfoWindow({
+			content: infoWindowContent()
+		    });
+
+		    infoWindow.open(_instance, marker);
+		    currentInfoWindow = infoWindow;
+		});
         }
         
         // Cache marker 
@@ -331,8 +334,8 @@
   /**
    * Map directive
    */
-  googleMapsModule.directive("googleMap", ["$log", "$timeout", "$filter", function ($log, $timeout, 
-      $filter) {
+    googleMapsModule.directive("googleMap", ["$log", "$timeout", "$filter", "$compile",function ($log, $timeout, 
+												 $filter, $compile) {
 
     var controller = function ($scope, $element) {
       
@@ -394,7 +397,7 @@
           center: new google.maps.LatLng(scope.center.latitude, scope.center.longitude),              
           draggable: attrs.draggable == "true",
           zoom: scope.zoom
-        }));       
+        }),scope,$compile);       
       
         _m.on("drag", function () {
           
@@ -487,7 +490,7 @@
         }
         
         // Put the map into the scope
-        scope.map = _m;
+        //scope.map = _m;
         
         // Check if we need to refresh the map
         if (angular.isUndefined(scope.refresh())) {
@@ -507,9 +510,7 @@
           $timeout(function () {
             
             angular.forEach(newValue, function (v, i) {
-              if (!_m.hasMarker(v.latitude, v.longitude)) {
                 _m.addMarker(v.latitude, v.longitude, v.icon, v.infoWindow);
-              }
             });
             
             // Clear orphaned markers
