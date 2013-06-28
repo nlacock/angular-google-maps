@@ -203,7 +203,7 @@
       
       this.addMarker = function (lat, lng, icon, infoWindowContent, label, url,
           thumbnail) {
-        var m = that.findMarker(lat, lng)
+          var m = that.findMarker(lat, lng, icon)
         if ( m != null) {
           return;
         }
@@ -258,17 +258,18 @@
         return marker;
       };      
       
-      this.findMarker = function (lat, lng) {
-        for (var i = 0; i < _markers.length; i++) {
-          var pos = _markers[i].getPosition();
-          
-          if (floatEqual(pos.lat(), lat) && floatEqual(pos.lng(), lng)) {
-            return _markers[i];
-          }
-        }
+	  this.findMarker = function (lat, lng, icon) {
+              for (var i = 0; i < _markers.length; i++) {
+		  var pos = _markers[i].getPosition();
+		  var ic = _markers[i].getIcon();
+
+		  if (floatEqual(pos.lat(), lat) && floatEqual(pos.lng(), lng) && ic == icon) {
+		      return _markers[i];
+		  }
+              }
         
-        return null;
-      };  
+              return null;
+	  };  
       
       this.findMarkerIndex = function (lat, lng) {
         for (var i = 0; i < _markers.length; i++) {
